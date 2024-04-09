@@ -3,7 +3,7 @@ using RentABikeWebApp.Data;
 using RentABikeWebApp.Data.Services;
 using RentABikeWebApp.Models;
 
-namespace TestsRentABikeWebApp
+namespace RentABikeWebApp.Tests
 {
     [TestClass]
     public class BikesServiceTests

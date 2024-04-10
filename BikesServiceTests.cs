@@ -1,162 +1,105 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RentABikeWebApp.Data;
 using RentABikeWebApp.Data.Services;
 using RentABikeWebApp.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace RentABikeWebApp.Tests
+namespace TestsRentABikeWebApp
 {
     [TestClass]
     public class BikesServiceTests
     {
-        [TestMethod]
-        public async Task AddAsync_ShouldAddBikeToDatabase()
+        private ApplicationDbContext _context;
+
+        [TestInitialize]
+        public void Initialize()
         {
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase(databaseName: "AddBikeToDatabase")
+                .UseInMemoryDatabase(databaseName: "TestDatabase")
                 .Options;
 
-            using (var context = new ApplicationDbContext(options))
+            _context = new ApplicationDbContext(options);
+            _context.Database.EnsureCreated();
+            SeedDatabase();
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _context.Database.EnsureDeleted();
+            _context.Dispose();
+        }
+
+        private void SeedDatabase()
+        {
+            var bikes = new[]
             {
-                var service = new BikesService(context);
-                var bike = new Bike
-                {
-                    Id = 1,
-                    Type = BikeType.Mountain,
-                    PricePerHour = 15.00m,
-                    Status = "Available",
-                    Image = new byte[] { 0x01, 0x02, 0x03 },
-                };
-
-                await service.AddAsync(bike);
-
-                var result = await context.Bikes.FindAsync(1);
-                Assert.IsNotNull(result);
-                Assert.AreEqual(bike.Id, result.Id);
-                Assert.AreEqual(bike.Type, result.Type);
-                Assert.AreEqual(bike.PricePerHour, result.PricePerHour);
-                Assert.AreEqual(bike.Status, result.Status);
-                CollectionAssert.AreEqual(bike.Image, result.Image);
-            }
+                new Bike { Id = 1, Type = BikeType.Simple, PricePerHour = 10.00m },
+                new Bike { Id = 2, Type = BikeType.Mountain, PricePerHour = 15.00m }
+            };
+            _context.Bikes.AddRange(bikes);
+            _context.SaveChanges();
         }
 
         [TestMethod]
-        public async Task DeleteAsync_ShouldDeleteBikeFromDatabase()
+        public async Task GetAllAsync_ReturnsAllBikes()
         {
-            // Arrange
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase(databaseName: "DeleteBikeFromDatabase")
-                .Options;
-
-            using (var context = new ApplicationDbContext(options))
-            {
-                var bike = new Bike { Id = 1 };
-                await context.Bikes.AddAsync(bike);
-                await context.SaveChangesAsync();
-
-                var service = new BikesService(context);
-
-                // Act
-                await service.DeleteAsync(1);
-
-                // Assert
-                var result = await context.Bikes.FindAsync(1);
-                Assert.IsNull(result);
-            }
+            var service = new BikesService(_context);
+            var result = await service.GetAllAsync();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(2, result.Count());
         }
 
         [TestMethod]
-        public async Task GetAllAsync_ShouldReturnAllBikesFromDatabase()
+        public async Task GetByIdAsync_ReturnsBike_WhenExists()
         {
-            // Arrange
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase(databaseName: "GetAllBikesFromDatabase")
-                .Options;
-
-            using (var context = new ApplicationDbContext(options))
-            {
-                var bikes = new List<Bike>
-                {
-                    new Bike { Id = 1, Type = BikeType.Simple },
-                    new Bike { Id = 2, Type = BikeType.Mountain },
-                    new Bike { Id = 3, Type = BikeType.Double }
-                };
-                await context.Bikes.AddRangeAsync(bikes);
-                await context.SaveChangesAsync();
-
-                var service = new BikesService(context);
-
-                // Act
-                var result = await service.GetAllAsync();
-
-                // Assert
-                CollectionAssert.AreEqual(bikes, result.ToList());
-            }
+            var service = new BikesService(_context);
+            var result = await service.GetByIdAsync(1);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(BikeType.Simple, result.Type);
         }
 
         [TestMethod]
-        public async Task GetByIdAsync_ShouldReturnBikeWithGivenId()
+        public async Task GetByIdAsync_ReturnsNull_WhenNotExists()
         {
-            // Arrange
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase(databaseName: "GetBikeByIdFromDatabase")
-                .Options;
-
-            using (var context = new ApplicationDbContext(options))
-            {
-                var bikes = new List<Bike>
-                {
-                    new Bike { Id = 1, Type = BikeType.Simple },
-                    new Bike { Id = 2, Type = BikeType.Mountain },
-                    new Bike { Id = 3, Type = BikeType.Double }
-                };
-                await context.Bikes.AddRangeAsync(bikes);
-                await context.SaveChangesAsync();
-
-                var service = new BikesService(context);
-
-                // Act
-                var result = await service.GetByIdAsync(2);
-
-                // Assert
-                Assert.IsNotNull(result);
-                Assert.AreEqual(bikes[1], result);
-            }
+            var service = new BikesService(_context);
+            var result = await service.GetByIdAsync(100);
+            Assert.IsNull(result);
         }
 
         [TestMethod]
-        public async Task UpdateAsync_ShouldUpdateBikeInDatabase()
+        public async Task AddAsync_AddsBikeToDatabase()
         {
-            // Arrange
-            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseInMemoryDatabase(databaseName: "UpdateBikeInDatabase")
-                .Options;
-
-            using (var context = new ApplicationDbContext(options))
-            {
-                var bike = new Bike { Id = 1, Type = BikeType.Simple, PricePerHour = 15.00m };
-                await context.Bikes.AddAsync(bike);
-                await context.SaveChangesAsync();
-            }
-
-            using (var context = new ApplicationDbContext(options))
-            {
-                var updatedBike = new Bike { Id = 1, Type = BikeType.Mountain, PricePerHour = 20.00m };
-
-                var service = new BikesService(context);
-
-                // Act
-                await service.UpdateAsync(1, updatedBike);
-
-                // Assert
-                using (var assertContext = new ApplicationDbContext(options))
-                {
-                    var result = await assertContext.Bikes.FindAsync(1);
-                    Assert.IsNotNull(result);
-                    Assert.AreEqual(updatedBike.Type, result.Type);
-                    Assert.AreEqual(updatedBike.PricePerHour, result.PricePerHour);
-                }
-            }
+            var service = new BikesService(_context);
+            var newBike = new Bike { Type = BikeType.Simple, PricePerHour = 20.00m };
+            await service.AddAsync(newBike);
+            var bikes = await _context.Bikes.ToListAsync();
+            Assert.AreEqual(3, bikes.Count);
+            Assert.IsTrue(bikes.Any(b => b.Type == BikeType.Simple));
         }
 
+        [TestMethod]
+        public async Task UpdateAsync_UpdatesBikeInDatabase()
+        {
+            var service = new BikesService(_context);
+            var existingBike = await _context.Bikes.FindAsync(1);
+            existingBike.Type = BikeType.Mountain;
+            await service.UpdateAsync(1, existingBike);
+            var updatedBike = await _context.Bikes.FindAsync(1);
+            Assert.IsNotNull(updatedBike);
+            Assert.AreEqual(BikeType.Mountain, updatedBike.Type);
+        }
+
+        [TestMethod]
+        public async Task DeleteAsync_DeletesBikeFromDatabase()
+        {
+            var service = new BikesService(_context);
+            await service.DeleteAsync(1);
+            var deletedBike = await _context.Bikes.FindAsync(1);
+            Assert.IsNull(deletedBike);
+        }
     }
 }

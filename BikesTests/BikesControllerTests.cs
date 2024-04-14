@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
-namespace TestsRentABikeWebApp
+namespace TestsRentABikeWebApp.BikesTests
 {
     [TestClass]
     public class BikesControllerTests
@@ -162,7 +162,7 @@ namespace TestsRentABikeWebApp
 
         [TestMethod]
         public async Task DeleteConfirmed_DeletesBikeFromDatabase()
-        { 
+        {
             var controller = new BikesController(new BikesService(_context));
             await controller.DeleteConfirmed(1);
             var deletedBike = await _context.Bikes.FindAsync(1);

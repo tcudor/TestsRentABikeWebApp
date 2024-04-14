@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace TestsRentABikeWebApp
+namespace TestsRentABikeWebApp.BikesTests
 {
     [TestClass]
     public class BikesServiceTests
@@ -100,6 +100,43 @@ namespace TestsRentABikeWebApp
             await service.DeleteAsync(1);
             var deletedBike = await _context.Bikes.FindAsync(1);
             Assert.IsNull(deletedBike);
+        }
+
+        [TestMethod]
+        public void UpdateBikeStatusBasedOnReservations_ActiveReservation_StatusIsUnavailable()
+        {
+            // Arrange
+            var reservations = new List<Reservation> { new Reservation { StartDate = DateTime.Now.AddDays(-1), EndDate = DateTime.Now.AddDays(1) } };
+            var bike = new Bike
+            {
+                Id = 3,
+                Status = StatusType.Available,
+                Reservations = reservations
+            };
+            _context.Bikes.Add(bike);
+            _context.SaveChanges();
+
+            var service = new BikesService(_context);
+            service.UpdateBikeStatusBasedOnReservations(bike);
+            Assert.AreEqual(StatusType.Unavailable, bike.Status);
+        }
+
+        [TestMethod]
+        public void UpdateBikeStatusBasedOnReservations_NoActiveReservation_StatusIsAvailable()
+        {
+            var reservations = new List<Reservation> { new Reservation { StartDate = DateTime.Now.AddDays(-2), EndDate = DateTime.Now.AddDays(-1) } };
+            var bike = new Bike
+            {
+                Id = 4,
+                Status = StatusType.Unavailable,
+                Reservations = reservations
+            };
+            _context.Bikes.Add(bike);
+            _context.SaveChanges();
+
+            var service = new BikesService(_context);
+            service.UpdateBikeStatusBasedOnReservations(bike);
+            Assert.AreEqual(StatusType.Available, bike.Status);
         }
     }
 }

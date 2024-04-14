@@ -7,7 +7,7 @@ using RentABikeWebApp.Models;
 using RentABikeWebApp.Data.Services;
 using System.Threading.Tasks;
 
-namespace TestsRentABikeWebApp
+namespace TestsRentABikeWebApp.CustomersTests
 {
     [TestClass]
     public class CustomersControllerTests
